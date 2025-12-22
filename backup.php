@@ -17,6 +17,8 @@ require_once($CFG->dirroot . '/backup/util/includes/backup_includes.php');
 list($options, $unrecognized) = cli_get_params(array(
     'categoryid' => false,
     'destination' => '',
+    'users' => 0,
+    'anonymize' => 0,
     'help' => false,
     ), array('h' => 'help'));
 
@@ -54,6 +56,17 @@ $index = 1;
 foreach ($courses as $cs) {
     $bc = new backup_controller(backup::TYPE_1COURSE, $cs->id, backup::FORMAT_MOODLE,
                                 backup::INTERACTIVE_YES, backup::MODE_GENERAL, $admin->id);
+
+    $settings = $bc->get_plan()->get_settings();
+
+    if (isset($settings['users'])) {
+        $settings['users']->set_value((bool)$options['users']);
+    }
+
+    if (isset($settings['anonymize'])) {
+        $settings['anonymize']->set_value((bool)$options['anonymize']);
+    }
+    
     
     mtrace(get_string('performingbck', 'tool_brcli', $index . '/' . $amount_of_courses));
 
