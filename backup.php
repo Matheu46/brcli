@@ -94,6 +94,45 @@ foreach ($courses as $cs) {
     $results = $bc->get_results();
     $file = $results['backup_destination']; // May be empty if file already moved to target location.
 
+    // Gather metadata info
+    $course = get_course($cs->id);
+    $category = core_course_category::get($course->category);
+    $modinfo = get_fast_modinfo($course);
+
+    // count modules by type
+    $usedmods = [];
+    foreach ($modinfo->get_cms() as $cm) {
+        $usedmods[$cm->modname] = true;
+    }
+
+    // count roles
+    $context = context_course::instance($course->id);
+    $rolecounts = get_role_users(null, $context, false);
+    $roles = [];
+    foreach ($rolecounts as $u) {
+        $roles[$u->roleshortname] = isset($roles[$u->roleshortname]) ? $roles[$u->roleshortname] + 1 : 1;
+    }
+
+    // build metadata array
+    $metadata = [
+        'id' => $course->id,
+        'fullname' => $course->fullname,
+        'shortname' => $course->shortname,
+        'idnumber' => $course->idnumber,
+        'category' => $category->name,
+        'categoryid' => $category->id,
+        'groups_count' => count(groups_get_all_groups($course->id)),
+        'groupings_count' => count(groups_get_all_groupings($course->id)),
+        'roles' => $roles,
+        'format' => $course->format,
+        'modules' => array_keys($usedmods),
+        'backup_date' => date('c'),
+        'mbz_file' => $filename
+    ];
+
+    // write metadata JSON
+    file_put_contents($dir . '/' . $filename . '.json', json_encode($metadata, JSON_PRETTY_PRINT));
+
     // Do we need to store backup somewhere else?
     if ($file) {
         if ($file->copy_content_to($dir.'/'.$filename)) {
